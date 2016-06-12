@@ -25,3 +25,9 @@ spring:
           use_jdbc_metadata_defaults: false
         hbm2ddl:
           auto: validate
+kafka:
+  topic: messages
+  hosts: ec2-52-28-34-119.eu-central-1.compute.amazonaws.com:9092
+zookeeper:
+  host: ec2-52-28-34-119.eu-central-1.compute.amazonaws.com:2181
+

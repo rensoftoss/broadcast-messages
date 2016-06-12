@@ -6,9 +6,12 @@ import com.rensoftoss.broadcastmessages.dao.MessagesRepository;
 import com.rensoftoss.broadcastmessages.model.CustomMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,6 +24,10 @@ import java.util.stream.StreamSupport;
 @RestController
 @Slf4j
 public class MessagesController {
+
+    @Qualifier(value = "queueInput")
+    @Autowired
+    MessageChannel inputQueue;
 
     @Autowired
     MessagesRepository messagesRepository;
@@ -41,6 +48,7 @@ public class MessagesController {
         }
 
         log.info("Message input: " + message);
+        inputQueue.send(new GenericMessage<String>(message));
 
     }
 

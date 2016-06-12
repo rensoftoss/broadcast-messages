@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
+	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+    <int:channel id="inputFromKafka">
+        <int:dispatcher task-executor="kafkaMessageExecutor"/>
+    </int:channel>
+
+    <int-kafka:zookeeper-connect id="zookeeperConnect"
+                                 zk-connect="${zookeeper.host}"/>
+
+    <int-kafka:inbound-channel-adapter
+            id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="databaseConsumerContext"
+            auto-startup="true" channel="inputFromKafka">
+        <int:poller fixed-delay="10" time-unit="MILLISECONDS"
+                    max-messages-per-poll="5"/>
+    </int-kafka:inbound-channel-adapter>
+
+
+    <int-kafka:consumer-context id="databaseConsumerContext"
+                                consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
+        <int-kafka:consumer-configurations>
+            <int-kafka:consumer-configuration key-decoder="stringDecoder"
+                                              value-decoder="stringDecoder"
+                                              group-id="defaultGrp" max-messages="20000">
+                <int-kafka:topic id="${kafka.topic}" streams="3"/>
+            </int-kafka:consumer-configuration>
+        </int-kafka:consumer-configurations>
+    </int-kafka:consumer-context>
+
+    <task:executor id="kafkaMessageExecutor" pool-size="0-10"
+                   keep-alive="120" queue-capacity="500"/>
+
+    <int:outbound-channel-adapter channel="inputFromKafka"
+                                  ref="persistMessage" method="processMessage"/>
+
+    <bean id="persistMessage" class="com.rensoftoss.broadcastmessages.PersistMessage"/>
+
+</beans>
