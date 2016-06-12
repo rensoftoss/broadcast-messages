@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Realtime messages</title>
+
+    <script src="sockjs.js"></script>
+    <script src="stomp.js"></script>
+
+    <script type="text/javascript">
+        var stompClient = null;
+
+        function setConnected(connected) {
+            document.getElementById('connectedLabel').textContent = 'Status: ' + (connected ? 'Connected' : 'Not connected');
+
+            document.getElementById('messagesDiv').style.visibility = connected ? 'visible' : 'hidden';
+            document.getElementById('messagesResponse').innerHTML = '';
+        }
+
+        function connect() {
+            var socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                setConnected(true);
+                console.log('Connected: ' + frame);
+
+                var connectedLabel = document.getElementById('connectedLabel').textContent = 'Status: ' + frame ;
+
+                stompClient.subscribe('/topic/messages', function (messageResult) {
+                    showResult(JSON.parse(messageResult.body).result);
+                });
+            });
+        }
+
+        function showResult(message) {
+            var response = document.getElementById('messagesResponse');
+            var p = document.createElement('p');
+            p.style.wordWrap = 'break-word';
+            p.appendChild(document.createTextNode(message));
+            response.appendChild(p);
+        }
+    </script>
+</head>
+
+<body>
+<noscript><h2>Enable Java script and reload this page to run demo</h2></noscript>
+<h1>Realtime messages</h1>
+<div>
+    <div id="connectedDiv">
+        <label id="connectedLabel"> </label>
+    </div>
+    <div id="messagesDiv">
+        <p id="messagesResponse"></p>
+    </div>
+</div>
+
+<script type="text/javascript">
+    setConnected(false);
+    connect();
+</script>
+</body>
+</html>

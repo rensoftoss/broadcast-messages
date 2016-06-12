@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://messagesdb.cukxrfuofwv6.eu-central-1.rds.amazonaws.com:5432/messagesdb
+    username: admintyevip4
+    password: RW3wDcXtpthg
+    test-on-borrow: true
+    test-while-idle: true
+    validation-query: select 1;
+    maxActive: 1
+    xa:
+      data-source-class-name: org.postgresql.xa.PGXADataSource
+  jpa:
+    show-sql: false
+    generate-ddl: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQL9Dialect
+        show_sql: false
+        order_inserts: true
+        order_updates: true
+        jdbc.batch_size: 50
+        jdbc.fetch_size: 50
+        default_batch_fetch_size: 50
+        temp:
+          use_jdbc_metadata_defaults: false
+        hbm2ddl:
+          auto: validate

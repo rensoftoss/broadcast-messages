@@ -1,0 +1,9 @@
+# Created by .ignore support plugin (hsz.mobi)
+.gitignore
+.idea/
+broadcast-messages.iml
+/broadcast-messages-model/target/
+/broadcast-messages-web/target/
+/deployments/*
+/broadcast-messages-model/broadcast-messages-model.iml
+/broadcast-messages-web/broadcast-messages-web.iml
