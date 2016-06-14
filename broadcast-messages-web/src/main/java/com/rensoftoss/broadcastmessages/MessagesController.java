@@ -32,6 +32,9 @@ public class MessagesController {
     @Autowired
     MessagesRepository messagesRepository;
 
+    @Autowired
+    MessageConverter messageConverter;
+
     @RequestMapping(value = "/list", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<String> getMessages() {
@@ -42,14 +45,12 @@ public class MessagesController {
 
     @RequestMapping(value = "/add", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.POST)
     public void addMessage(@RequestBody String message) throws InvalidMessageFormatException {
-
         if (!isJSONValid(message)) {
             throw new InvalidMessageFormatException(message);
         }
 
         log.info("Message input: " + message);
-        inputQueue.send(new GenericMessage<String>(message));
-
+        inputQueue.send(messageConverter.convertTo(message));
     }
 
     @ExceptionHandler(InvalidMessageFormatException.class)
@@ -66,7 +67,7 @@ public class MessagesController {
         return new ResponseEntity<>(clientErrorInformation, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    public static boolean isJSONValid(String jsonInString) {
+    private static boolean isJSONValid(String jsonInString) {
         try {
             final ObjectMapper mapper = new ObjectMapper();
             mapper.readTree(jsonInString);

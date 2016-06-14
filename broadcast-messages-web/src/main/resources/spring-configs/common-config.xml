@@ -7,11 +7,7 @@
 
     <context:annotation-config/>
 
-    <bean id="yamlProperties" class="org.springframework.beans.factory.config.YamlPropertiesFactoryBean">
-        <property name="resources" value="classpath:application.yml"/>
-    </bean>
-
-    <context:property-placeholder properties-ref="yamlProperties"/>
+    <context:property-placeholder location="classpath:application.properties"/>
 
     <bean id="stringEncoder"
           class="org.springframework.integration.kafka.serializer.common.StringEncoder"/>
@@ -19,5 +15,5 @@
     <bean id="stringDecoder"
           class="org.springframework.integration.kafka.serializer.common.StringDecoder"/>
 
-    <!--<bean class="org.springframework.config.java.process.ConfigurationPostProcessor"/>-->
+    <bean id="messageConverter" class="com.rensoftoss.broadcastmessages.MessageConverter"/>
 </beans>
