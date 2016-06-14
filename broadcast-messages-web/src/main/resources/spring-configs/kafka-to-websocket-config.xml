@@ -23,6 +23,9 @@
     <util:map id="webSocketSessionStore" map-class="java.util.concurrent.ConcurrentHashMap"
               key-type="java.lang.String" value-type="java.lang.String"/>
 
+    <util:map id="webSocketSubscriptionStore" map-class="java.util.concurrent.ConcurrentHashMap"
+              key-type="java.lang.String" value-type="java.lang.String"/>
+
     <bean id="stompSubProtocolHandler" class="org.springframework.web.socket.messaging.StompSubProtocolHandler"/>
 
     <int-websocket:server-container id="serverWebSocketContainer" path="/ws">
@@ -42,6 +45,10 @@
                              default-output-channel="nullChannel">
         <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).CONNECT_ACK.name()}"
                      channel="connectAck"/>
+        <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).SUBSCRIBE.name()}"
+                     channel="subscribe"/>
+        <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).UNSUBSCRIBE.name()}"
+                     channel="unsubscribe"/>
         <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).DISCONNECT.name()}"
                      channel="disconnect"/>
     </int:header-value-router>
@@ -50,12 +57,13 @@
                                   expression="@webSocketSessionStore.put(headers.simpSessionId,
 								                             headers.simpConnectMessage.headers.nativeHeaders.login)"/>
 
-    <int:outbound-channel-adapter id="disconnect">
-        <int-groovy:script>
-            webSocketSessionStore.remove(headers.simpSessionId)
-            null
-        </int-groovy:script>
-    </int:outbound-channel-adapter>
+    <int:outbound-channel-adapter id="subscribe"
+                                  expression="@webSocketSubscriptionStore.put(headers.simpSessionId,
+								                             headers.simpSubscriptionId)"/>
+
+    <int:outbound-channel-adapter id="unsubscribe" expression="@webSocketSubscriptionStore.remove(headers.simpSessionId)"/>
+
+    <int:outbound-channel-adapter id="disconnect" expression="@webSocketSessionStore.remove(headers.simpSessionId)"/>
 
     <!--Defining queue consumer from web socket side -->
 
@@ -96,7 +104,7 @@
                         .copyHeaders(headers)
                         .setHeader(StompHeaderAccessor.SESSION_ID_HEADER, it.key)
                         .setHeader(StompHeaderAccessor.DESTINATION_HEADER, "/topic/messages")
-                        .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, "sub-0")
+                        .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, webSocketSubscriptionStore.get(it.key))
                         .build()
             }
         </int-groovy:script>
@@ -110,9 +118,5 @@
 
     <int-websocket:outbound-channel-adapter channel="sendMessage" container="serverWebSocketContainer"
                                             default-protocol-handler="stompSubProtocolHandler"/>
-
-    <!--<int-websocket:outbound-channel-adapter channel="queueWebsocketChannel" container="serverWebSocketContainer"-->
-    <!--default-protocol-handler="stompSubProtocolHandler"/>-->
-
 
 </beans>
