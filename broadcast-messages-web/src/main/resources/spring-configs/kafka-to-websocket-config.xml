@@ -1,7 +1,118 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
+       xmlns:int-websocket="http://www.springframework.org/schema/integration/websocket"
+       xmlns:int-groovy="http://www.springframework.org/schema/integration/groovy"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-event="http://www.springframework.org/schema/integration/event"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
+	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+	   http://www.springframework.org/schema/integration/websocket http://www.springframework.org/schema/integration/websocket/spring-integration-websocket.xsd
+	   http://www.springframework.org/schema/integration/event http://www.springframework.org/schema/integration/event/spring-integration-event.xsd
+	   http://www.springframework.org/schema/integration/groovy	http://www.springframework.org/schema/integration/groovy/spring-integration-groovy.xsd
+	   http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <int:wire-tap channel="logger"/>
+    <int:logging-channel-adapter id="logger" level="INFO" log-full-message="true"/>
+
+    <util:map id="webSocketSessionStore" map-class="java.util.concurrent.ConcurrentHashMap"
+              key-type="java.lang.String" value-type="java.lang.String"/>
+
+    <bean id="stompSubProtocolHandler" class="org.springframework.web.socket.messaging.StompSubProtocolHandler"/>
+
+    <int-websocket:server-container id="serverWebSocketContainer" path="/ws">
+        <int-websocket:sockjs heartbeat-time="10000"/>
+    </int-websocket:server-container>
+
+    <int-websocket:inbound-channel-adapter id="routeStompEvents" container="serverWebSocketContainer"
+                                           default-protocol-handler="stompSubProtocolHandler"/>
+
+    <int-event:inbound-channel-adapter event-types="org.springframework.web.socket.messaging.AbstractSubProtocolEvent"
+                                       payload-expression="message"
+                                       channel="routeStompEvents"/>
+
+    <int:header-value-router input-channel="routeStompEvents"
+                             header-name="simpMessageType"
+                             resolution-required="false"
+                             default-output-channel="nullChannel">
+        <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).CONNECT_ACK.name()}"
+                     channel="connectAck"/>
+        <int:mapping value="#{T(org.springframework.messaging.simp.SimpMessageType).DISCONNECT.name()}"
+                     channel="disconnect"/>
+    </int:header-value-router>
+
+    <int:outbound-channel-adapter id="connectAck"
+                                  expression="@webSocketSessionStore.put(headers.simpSessionId,
+								                             headers.simpConnectMessage.headers.nativeHeaders.login)"/>
+
+    <int:outbound-channel-adapter id="disconnect">
+        <int-groovy:script>
+            webSocketSessionStore.remove(headers.simpSessionId)
+            null
+        </int-groovy:script>
+    </int:outbound-channel-adapter>
+
+    <!--Defining queue consumer from web socket side -->
+
+    <int:channel id="queueWebsocketChannel">
+        <int:dispatcher task-executor="kafkaWsExecutor"/>
+    </int:channel>
+
+    <task:executor id="kafkaWsExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
+
+    <int-kafka:zookeeper-connect id="zookeeperConnect"
+                                 zk-connect="${zookeeper.host}"/>
+
+    <int-kafka:inbound-channel-adapter
+            id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="websocketConsumerContext"
+            auto-startup="true" channel="queueWebsocketChannel">
+        <int:poller fixed-delay="10" time-unit="MILLISECONDS"
+                    max-messages-per-poll="5"/>
+    </int-kafka:inbound-channel-adapter>
+
+    <int-kafka:consumer-context id="websocketConsumerContext"
+                                consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
+        <int-kafka:consumer-configurations>
+            <int-kafka:consumer-configuration key-decoder="stringDecoder"
+                                              value-decoder="stringDecoder"
+                                              group-id="${server.server-name}" max-messages="20000">
+                <int-kafka:topic id="${kafka.topic}" streams="3"/>
+            </int-kafka:consumer-configuration>
+        </int-kafka:consumer-configurations>
+    </int-kafka:consumer-context>
+
+    <int:splitter input-channel="queueWebsocketChannel" output-channel="sendMessage" apply-sequence="false">
+        <int-groovy:script>
+            import org.springframework.integration.support.MessageBuilder
+            import org.springframework.messaging.simp.stomp.StompHeaderAccessor
+
+            webSocketSessionStore.collect {
+                MessageBuilder.withPayload(payload)
+                        .copyHeaders(headers)
+                        .setHeader(StompHeaderAccessor.SESSION_ID_HEADER, it.key)
+                        .setHeader(StompHeaderAccessor.DESTINATION_HEADER, "/topic/messages")
+                        .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, "sub-0")
+                        .build()
+            }
+        </int-groovy:script>
+    </int:splitter>
+
+    <int:channel id="sendMessage">
+        <int:dispatcher task-executor="wsExecutor"/>
+    </int:channel>
+
+    <task:executor id="wsExecutor"/>
+
+    <int-websocket:outbound-channel-adapter channel="sendMessage" container="serverWebSocketContainer"
+                                            default-protocol-handler="stompSubProtocolHandler"/>
+
+    <!--<int-websocket:outbound-channel-adapter channel="queueWebsocketChannel" container="serverWebSocketContainer"-->
+    <!--default-protocol-handler="stompSubProtocolHandler"/>-->
 
 
 </beans>

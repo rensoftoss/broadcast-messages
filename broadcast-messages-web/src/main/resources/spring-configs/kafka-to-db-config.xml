@@ -9,38 +9,36 @@
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
-    <int:channel id="inputFromKafka">
-        <int:dispatcher task-executor="kafkaMessageExecutor"/>
+    <int:channel id="queueToDatabaseChannel">
+        <int:dispatcher task-executor="kafkaDbExecutor"/>
     </int:channel>
+
+    <task:executor id="kafkaDbExecutor" pool-size="0-10"
+                   keep-alive="120" queue-capacity="500"/>
 
     <int-kafka:zookeeper-connect id="zookeeperConnect"
                                  zk-connect="${zookeeper.host}"/>
 
     <int-kafka:inbound-channel-adapter
             id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="databaseConsumerContext"
-            auto-startup="true" channel="inputFromKafka">
+            auto-startup="true" channel="queueToDatabaseChannel">
         <int:poller fixed-delay="10" time-unit="MILLISECONDS"
                     max-messages-per-poll="5"/>
     </int-kafka:inbound-channel-adapter>
-
 
     <int-kafka:consumer-context id="databaseConsumerContext"
                                 consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
         <int-kafka:consumer-configurations>
             <int-kafka:consumer-configuration key-decoder="stringDecoder"
                                               value-decoder="stringDecoder"
-                                              group-id="defaultGrp" max-messages="20000">
+                                              group-id="databaseGroup" max-messages="20000">
                 <int-kafka:topic id="${kafka.topic}" streams="3"/>
             </int-kafka:consumer-configuration>
         </int-kafka:consumer-configurations>
     </int-kafka:consumer-context>
 
-    <task:executor id="kafkaMessageExecutor" pool-size="0-10"
-                   keep-alive="120" queue-capacity="500"/>
-
-    <int:outbound-channel-adapter channel="inputFromKafka"
+    <int:outbound-channel-adapter channel="queueToDatabaseChannel"
                                   ref="persistMessage" method="processMessage"/>
 
     <bean id="persistMessage" class="com.rensoftoss.broadcastmessages.PersistMessage"/>
-
 </beans>
