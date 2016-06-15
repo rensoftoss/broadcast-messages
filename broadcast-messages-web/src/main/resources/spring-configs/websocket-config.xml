@@ -2,14 +2,12 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:int="http://www.springframework.org/schema/integration"
-       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
        xmlns:int-websocket="http://www.springframework.org/schema/integration/websocket"
        xmlns:int-groovy="http://www.springframework.org/schema/integration/groovy"
        xmlns:task="http://www.springframework.org/schema/task"
        xmlns:int-event="http://www.springframework.org/schema/integration/event"
        xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-       http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
 	   http://www.springframework.org/schema/integration/websocket http://www.springframework.org/schema/integration/websocket/spring-integration-websocket.xsd
@@ -81,61 +79,15 @@
         </int-groovy:script>
     </int:outbound-channel-adapter>
 
-    <!--Defining queue consumer from web socket side -->
+    <!--Define output channel on websocket for sending message to connected clients -->
 
-    <int:channel id="queueWebsocketChannel">
-        <int:dispatcher task-executor="kafkaWsExecutor"/>
+    <int:channel id="sendMessageChannel">
+        <int:dispatcher task-executor="sendMessageExecutor"/>
     </int:channel>
 
-    <task:executor id="kafkaWsExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
+    <task:executor id="sendMessageExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
 
-    <int-kafka:inbound-channel-adapter
-            id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="websocketConsumerContext"
-            auto-startup="true" channel="queueWebsocketChannel">
-        <int:poller fixed-delay="10" time-unit="MILLISECONDS"
-                    max-messages-per-poll="5"/>
-    </int-kafka:inbound-channel-adapter>
-
-     <int-kafka:consumer-context id="websocketConsumerContext"
-                                consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
-        <int-kafka:consumer-configurations>
-            <int-kafka:consumer-configuration key-decoder="stringDecoder"
-                                              value-decoder="stringDecoder"
-                                              group-id="${server.server-name}Group" max-messages="20000">
-                <int-kafka:topic id="${kafka.topic}" streams="3"/>
-            </int-kafka:consumer-configuration>
-        </int-kafka:consumer-configurations>
-    </int-kafka:consumer-context>
-
-    <int:splitter input-channel="queueWebsocketChannel" output-channel="sendMessage" apply-sequence="false">
-        <int-groovy:script>
-            import org.springframework.integration.support.MessageBuilder
-            import org.springframework.messaging.simp.stomp.StompHeaderAccessor
-
-            def messages = payload.get("messages").collect { it.value }.flatten();
-
-            webSocketSessionStore.collect {
-                def sessionId = it.key;
-                def subscriptionId = webSocketSubscriptionStore.get(it.key);
-                messages.collect {
-                    MessageBuilder.withPayload(it)
-                            .copyHeaders(headers)
-                            .setHeader(StompHeaderAccessor.SESSION_ID_HEADER, sessionId)
-                            .setHeader(StompHeaderAccessor.DESTINATION_HEADER, "/topic/messages")
-                            .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, subscriptionId)
-                            .build()
-                }
-            }.flatten();
-        </int-groovy:script>
-    </int:splitter>
-
-    <int:channel id="sendMessage">
-        <int:dispatcher task-executor="wsExecutor"/>
-    </int:channel>
-
-    <task:executor id="wsExecutor"/>
-
-    <int-websocket:outbound-channel-adapter channel="sendMessage" container="serverWebSocketContainer"
+    <int-websocket:outbound-channel-adapter channel="sendMessageChannel" container="serverWebSocketContainer"
                                             default-protocol-handler="stompSubProtocolHandler"/>
 
 </beans>

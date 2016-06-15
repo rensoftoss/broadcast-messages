@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.support.GenericMessage;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -25,7 +24,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 public class MessagesController {
 
-    @Qualifier(value = "queueInput")
+    @Qualifier(value = "queueInputChannel")
     @Autowired
     MessageChannel inputQueue;
 

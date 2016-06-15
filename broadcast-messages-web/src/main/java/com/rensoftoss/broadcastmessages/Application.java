@@ -9,9 +9,11 @@ import org.springframework.web.cors.CorsConfiguration;
 @SpringBootApplication
 @ImportResource(value = {
         "classpath:spring-configs/common-config.xml",
-        "classpath:spring-configs/rest-to-kafka-config.xml",
-        "classpath:spring-configs/kafka-to-db-config.xml",
-        "classpath:spring-configs/kafka-to-websocket-config.xml"
+        "classpath:spring-configs/producer-config.xml",
+        "classpath:spring-configs/websocket-config.xml",
+        "classpath:spring-configs/consumer-config.xml",
+        "classpath:spring-configs/consumer-db-config.xml",
+        "classpath:spring-configs/consumer-ws-config.xml"
 })
 public class Application {
     public static void main(String[] args) {

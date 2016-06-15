@@ -9,37 +9,53 @@
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
-    <int:channel id="queueToDatabaseChannel">
-        <int:dispatcher task-executor="kafkaDbExecutor"/>
-    </int:channel>
-
-    <task:executor id="kafkaDbExecutor" pool-size="0-10"
-                   keep-alive="120" queue-capacity="500"/>
-
     <int-kafka:zookeeper-connect id="zookeeperConnect"
                                  zk-connect="${zookeeper.host}"
                                  zk-connection-timeout="${zookeeper.connection.timeout}"/>
 
     <int-kafka:inbound-channel-adapter
-            id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="databaseConsumerContext"
-            auto-startup="true" channel="queueToDatabaseChannel">
+            id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="consumerContext"
+            auto-startup="true" channel="queueOutputChannel">
         <int:poller fixed-delay="10" time-unit="MILLISECONDS"
                     max-messages-per-poll="5"/>
     </int-kafka:inbound-channel-adapter>
 
-    <int-kafka:consumer-context id="databaseConsumerContext"
+    <bean id="consumerProperties"
+          class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="properties">
+            <props>
+                <prop key="auto.offset.reset">smallest</prop>
+                <prop key="socket.receive.buffer.bytes">1048576</prop>
+                <prop key="fetch.message.max.bytes">5242880</prop>
+                <prop key="auto.commit.interval.ms">1000</prop>
+            </props>
+        </property>
+    </bean>
+
+    <int-kafka:consumer-context id="consumerContext" consumer-properties="consumerProperties"
                                 consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
         <int-kafka:consumer-configurations>
             <int-kafka:consumer-configuration key-decoder="stringDecoder"
                                               value-decoder="stringDecoder"
-                                              group-id="databaseGroup" max-messages="20000">
+                                              group-id="${server.server-name}Group" max-messages="20000">
                 <int-kafka:topic id="${kafka.topic}" streams="3"/>
             </int-kafka:consumer-configuration>
         </int-kafka:consumer-configurations>
     </int-kafka:consumer-context>
 
-    <int:outbound-channel-adapter channel="queueToDatabaseChannel"
-                                  ref="persistMessage" method="processMessage"/>
+    <int:channel id="queueOutputChannel">
+        <int:dispatcher task-executor="queueOutputExecutor"/>
+    </int:channel>
 
-    <bean id="persistMessage" class="com.rensoftoss.broadcastmessages.PersistMessage"/>
+    <task:executor id="queueOutputExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
+
+    <!--Route messages from queue into database and to connected clients-->
+    <int:recipient-list-router id="queueOutputRouter" input-channel="queueOutputChannel"
+                               timeout="6000"
+                               ignore-send-failures="false"
+                               apply-sequence="false">
+        <int:recipient channel="queueToDatabaseChannel"/>
+        <int:recipient channel="queueToWebsocketChannel"/>
+    </int:recipient-list-router>
+
 </beans>

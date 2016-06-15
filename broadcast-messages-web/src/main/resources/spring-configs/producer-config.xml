@@ -9,14 +9,14 @@
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
-    <int:channel id="queueInput">
+    <int:channel id="queueInputChannel">
         <int:queue/>
     </int:channel>
 
     <int-kafka:outbound-channel-adapter
             id="kafkaOutboundChannelAdapter"
             kafka-producer-context-ref="kafkaProducerContext"
-            channel="queueInput">
+            channel="queueInputChannel">
         <int:poller fixed-delay="100" time-unit="MILLISECONDS" receive-timeout="0" task-executor="taskExecutor"/>
     </int-kafka:outbound-channel-adapter>
 
