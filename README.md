@@ -3,9 +3,9 @@
 
 ## Introduction
 
-Welcome to the **broadcast-messages** repository which provides a sample chat server to send messages to connected browser clients.
+Welcome to the **broadcast-messages** repository, which provides a sample chat server to send messages to connected browser clients.
 
-The application use the following technologies: 
+The application uses the following technologies: 
 
 * Java 8
 * Spring Framework (Spring Boot, Spring Integration, Spring Data)
@@ -18,7 +18,8 @@ Additionally a consumer is running in the application, which takes the freshly r
 The list messages REST endpoint is also implemented for retrieving in JSON format all the messages that are persisted in the database.
 The messages are also be pushed through Websockets for listening browser clients at the time the message was received 
 on the add message REST endpoint.
-A simple HTML page is availabe to show the real time message delivery on the connected browser clients.
+A simple HTML page is availabe to show the real time message delivery on the connected browser clients. 
+Only the last message which is sent will be displayed. 
 
 ## Installation
 
@@ -36,6 +37,7 @@ The following details contains installation instructions after setting up and lo
     `sudo apt-get install openjdk-8-jdk`
     
      If you have more than one Java versions installed on your system. Run below command set the default Java:
+     
     `sudo update-alternatives --config java`
 
 * Download the binary of Maven packaging tool from **https://maven.apache.org/download.cgi**
@@ -44,12 +46,12 @@ The following details contains installation instructions after setting up and lo
     `export PATH=/home/ubuntu/temp/apache-maven-3.3.9/bin:$PATH`
 
 * Next you need to download and extract the provided source code and
-install it with Maven from the directory where the files have been extracted by
+package it with Maven from the directory where the files have been extracted by
 typing the following command:
 
     `mvn clean package`
     
-    Warning: Compiling the provided source needs memory, so maybe the compilation need to be done locally
+    **Warning:** Compiling the provided source needs memory, so maybe the compilation need to be done locally
     in case the EC2 instance has small amount of memory.
 
 * Go to the `deployments` directory in your folder and set permissions as follows:
@@ -59,7 +61,9 @@ typing the following command:
 * Install the compiled sources:
 
     `mkdir /opt`
+    
     `mkdir /opt/broadcast-messages`
+    
     `sudo cp -r /home/ubuntu/temp/broadcast-messages-master/deployments/* /opt/broadcast-messages`
 
 * Setup automatic start for the application. The config may need to be adjusted with some application parameters, 
@@ -83,7 +87,7 @@ which will be described later in **Coding details** section
     
     **Warning:** the correct path to Kafka maybe need to be updated in `kafka.conf`
 
-* Open the following ports on EC2 instance **8080** and **8180**. This reflects the setup in the **broadcast-messages.conf**, which
+* Open the following ports on EC2 instance **8080** and **8180**. This should reflect the setup in the **broadcast-messages.conf**, which
  configures two instances from the application
 
 * Additionally a load balancer with an elastic ip can be set on AWS platform to forward the requests to the configured server instances
@@ -92,15 +96,18 @@ which will be described later in **Coding details** section
     
 
 **Hints:** Before restarting the server the following commands can be run to make sure the Zookeeper registers Kafka correctly
-    `sudo rm /var/lib/zookeeper/version-2/*`
+
+    sudo rm /var/lib/zookeeper/version-2/*
      
 Also the logs can be deleted with folowing commands:
-    `sudo rm /var/log/zookeeper/*`
-    `sudo rm /opt/kafka_2.11-0.10.0.0/logs/*`
-    `sudo rm /tmp/broadcast-messages*`
+
+    sudo rm /var/log/zookeeper/*
+    sudo rm /opt/kafka_2.11-0.10.0.0/logs/*
+    sudo rm /tmp/broadcast-messages*
 
 Checking of available application logs is possible on server side:
-    `ll /tmp/broadcast-messages*`     
+
+    ll /tmp/broadcast-messages*     
      
 ## Usage details     
      
@@ -111,11 +118,13 @@ The available REST endpoints are the followings (replace the address with the ap
 * [Add message REST endpoint]: can be used to send a JSON message to the clients.
 
 Sending valid JSON:
+
     `curl -i -X POST -H "Content-Type:application/json" http://localhost:8080/add -d '{"title":"Hoops" }'`
 
 After sending a valid JSON message the connected browser clients will receive and show the last message that has been sent.
     
 Sending invalid JSON:
+
     `curl -i -X POST -H "Content-Type:application/json" localhost:8080/add -d '{"title":"Hoops }'`
 
 In case the message is not a valid JSON the response will be in the following format:
@@ -171,7 +180,8 @@ Following test cases are identified, :
 * Send a different message: it will be shown to all connected clients
 * Send invalid JSON message: the clients will not receive this message and the response 
 from REST endpoint will inform about the wrong message  
-* List of availabele messages
+* List of available messages
+* Send message to different instance(s): the message will be shown for all connected browser clients 
 
 It is also recommended to make load tests and scalability tests with SoapUI. 
 
