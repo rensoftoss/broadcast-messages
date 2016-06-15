@@ -33,7 +33,9 @@ The following details contains installation instructions after setting up and lo
 * Install Java 8 SDK:
 
     `sudo add-apt-repository ppa:openjdk-r/ppa`
+    
     `sudo apt-get update`
+    
     `sudo apt-get install openjdk-8-jdk`
     
      If you have more than one Java versions installed on your system. Run below command set the default Java:
