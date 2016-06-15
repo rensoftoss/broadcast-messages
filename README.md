@@ -92,7 +92,8 @@ which will be described later in **Coding details** section
 * Open the following ports on EC2 instance **8080** and **8180**. This should reflect the setup in the **broadcast-messages.conf**, which
  configures two instances from the application
 
-* Additionally a load balancer with an elastic ip can be set on AWS platform to forward the requests to the configured server instances
+* Additionally a load balancer with an elastic ip can be set on AWS platform to forward the requests to the configured server instances,
+but this requires to configure more than one EC2 instances 
     
 * Once the installation is completed the server can be restarted.
     
