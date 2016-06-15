@@ -186,7 +186,10 @@ from REST endpoint will inform about the wrong message
 * List of available messages
 * Send message to different instance(s): the message will be shown for all connected browser clients 
 
-It is also recommended to make load tests and scalability tests with SoapUI. 
+It is also recommended to make load tests and scalability tests with SoapUI.
+ 
+The above test cases are available under `testcases` directory. 
+Please make sure you adapt the host and port according to your configuration of server instances.
 
 ## Useful resources
 
