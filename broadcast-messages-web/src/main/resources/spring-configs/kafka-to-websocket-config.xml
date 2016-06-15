@@ -53,17 +53,33 @@
                      channel="disconnect"/>
     </int:header-value-router>
 
-    <int:outbound-channel-adapter id="connectAck"
-                                  expression="@webSocketSessionStore.put(headers.simpSessionId,
-								                             headers.simpConnectMessage.headers.nativeHeaders.login)"/>
+    <int:outbound-channel-adapter id="connectAck">
+        <int-groovy:script>
+            webSocketSessionStore.put(headers.simpSessionId, headers.simpConnectMessage.headers.nativeHeaders.login)
+            null
+        </int-groovy:script>
+    </int:outbound-channel-adapter>
 
-    <int:outbound-channel-adapter id="subscribe"
-                                  expression="@webSocketSubscriptionStore.put(headers.simpSessionId,
-								                             headers.simpSubscriptionId)"/>
+    <int:outbound-channel-adapter id="subscribe">
+        <int-groovy:script>
+            webSocketSubscriptionStore.put(headers.simpSessionId, headers.simpSubscriptionId)
+            null
+        </int-groovy:script>
+    </int:outbound-channel-adapter>
 
-    <int:outbound-channel-adapter id="unsubscribe" expression="@webSocketSubscriptionStore.remove(headers.simpSessionId)"/>
+    <int:outbound-channel-adapter id="unsubscribe">
+        <int-groovy:script>
+            webSocketSubscriptionStore.remove(headers.simpSessionId)
+            null
+        </int-groovy:script>
+    </int:outbound-channel-adapter>
 
-    <int:outbound-channel-adapter id="disconnect" expression="@webSocketSessionStore.remove(headers.simpSessionId)"/>
+    <int:outbound-channel-adapter id="disconnect">
+        <int-groovy:script>
+            webSocketSessionStore.remove(headers.simpSessionId)
+            null
+        </int-groovy:script>
+    </int:outbound-channel-adapter>
 
     <!--Defining queue consumer from web socket side -->
 
@@ -73,9 +89,6 @@
 
     <task:executor id="kafkaWsExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
 
-    <int-kafka:zookeeper-connect id="zookeeperConnect"
-                                 zk-connect="${zookeeper.host}"/>
-
     <int-kafka:inbound-channel-adapter
             id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="websocketConsumerContext"
             auto-startup="true" channel="queueWebsocketChannel">
@@ -83,12 +96,12 @@
                     max-messages-per-poll="5"/>
     </int-kafka:inbound-channel-adapter>
 
-    <int-kafka:consumer-context id="websocketConsumerContext"
+     <int-kafka:consumer-context id="websocketConsumerContext"
                                 consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
         <int-kafka:consumer-configurations>
             <int-kafka:consumer-configuration key-decoder="stringDecoder"
                                               value-decoder="stringDecoder"
-                                              group-id="${server.server-name}" max-messages="20000">
+                                              group-id="${server.server-name}Group" max-messages="20000">
                 <int-kafka:topic id="${kafka.topic}" streams="3"/>
             </int-kafka:consumer-configuration>
         </int-kafka:consumer-configurations>
@@ -99,14 +112,20 @@
             import org.springframework.integration.support.MessageBuilder
             import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 
+            def messages = payload.get("messages").collect { it.value }.flatten();
+
             webSocketSessionStore.collect {
-                MessageBuilder.withPayload(payload)
-                        .copyHeaders(headers)
-                        .setHeader(StompHeaderAccessor.SESSION_ID_HEADER, it.key)
-                        .setHeader(StompHeaderAccessor.DESTINATION_HEADER, "/topic/messages")
-                        .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, webSocketSubscriptionStore.get(it.key))
-                        .build()
-            }
+                def sessionId = it.key;
+                def subscriptionId = webSocketSubscriptionStore.get(it.key);
+                messages.collect {
+                    MessageBuilder.withPayload(it)
+                            .copyHeaders(headers)
+                            .setHeader(StompHeaderAccessor.SESSION_ID_HEADER, sessionId)
+                            .setHeader(StompHeaderAccessor.DESTINATION_HEADER, "/topic/messages")
+                            .setHeader(StompHeaderAccessor.SUBSCRIPTION_ID_HEADER, subscriptionId)
+                            .build()
+                }
+            }.flatten();
         </int-groovy:script>
     </int:splitter>
 

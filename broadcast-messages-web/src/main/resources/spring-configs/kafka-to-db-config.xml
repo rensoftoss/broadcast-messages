@@ -17,7 +17,8 @@
                    keep-alive="120" queue-capacity="500"/>
 
     <int-kafka:zookeeper-connect id="zookeeperConnect"
-                                 zk-connect="${zookeeper.host}"/>
+                                 zk-connect="${zookeeper.host}"
+                                 zk-connection-timeout="${zookeeper.connection.timeout}"/>
 
     <int-kafka:inbound-channel-adapter
             id="kafkaInboundChannelAdapter" kafka-consumer-context-ref="databaseConsumerContext"

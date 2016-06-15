@@ -28,19 +28,15 @@
                 var connectedLabel = document.getElementById('connectedLabel').textContent = 'Status: ' + frame;
 
                 stompClient.subscribe('/topic/messages', function (messageResult) {
-                    showResult(JSON.parse(messageResult.body).message);
+                    showResult(messageResult.body);
                 });
             });
         }
 
         function showResult(message) {
             var response = document.getElementById('messagesResponse');
-            var p = document.createElement('p');
-            p.style.wordWrap = 'break-word';
-            p.appendChild(document.createTextNode(message));
-            response.appendChild(p);
+            response.innerText = message;
         }
-
 
     </script>
 </head>

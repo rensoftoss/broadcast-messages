@@ -17,7 +17,7 @@
             id="kafkaOutboundChannelAdapter"
             kafka-producer-context-ref="kafkaProducerContext"
             channel="queueInput">
-        <int:poller fixed-delay="1000" time-unit="MILLISECONDS" receive-timeout="0" task-executor="taskExecutor"/>
+        <int:poller fixed-delay="100" time-unit="MILLISECONDS" receive-timeout="0" task-executor="taskExecutor"/>
     </int-kafka:outbound-channel-adapter>
 
     <task:executor id="taskExecutor" pool-size="5" keep-alive="120" queue-capacity="500"/>
