@@ -18,7 +18,7 @@ done
 
 # Specify options to pass to the Java VM.
 if [ "x$JAVA_OPTS" = "x" ]; then
-   JAVA_OPTS="-Xms64m -Xmx200m -XX:MaxMetaspaceSize=256m"
+   JAVA_OPTS="-Xms64m -Xmx150m -XX:MaxMetaspaceSize=150m"
 else
    echo "JAVA_OPTS already set in environment; overriding default settings with values: $JAVA_OPTS"
 fi
