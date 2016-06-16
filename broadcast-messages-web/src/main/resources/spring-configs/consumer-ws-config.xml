@@ -3,21 +3,41 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:int="http://www.springframework.org/schema/integration"
        xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
        xmlns:int-groovy="http://www.springframework.org/schema/integration/groovy"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+       http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
 	   http://www.springframework.org/schema/integration/groovy	http://www.springframework.org/schema/integration/groovy/spring-integration-groovy.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
     <!--Send message through websocket to connected clients-->
 
-    <int:channel id="queueToWebsocketChannel">
-        <int:dispatcher task-executor="wsExecutor"/>
+    <int:channel id="messagesQueueOutputChannel">
+        <int:dispatcher task-executor="messagesQueueOutputExecutor"/>
     </int:channel>
 
-    <task:executor id="wsExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
+    <task:executor id="messagesQueueOutputExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
 
-    <int:splitter input-channel="queueToWebsocketChannel" output-channel="sendMessageChannel" apply-sequence="false">
+    <int-kafka:inbound-channel-adapter
+            id="messagesInboundChannelAdapter" kafka-consumer-context-ref="messagesConsumerContext"
+            auto-startup="true" channel="messagesQueueOutputChannel">
+        <int:poller fixed-delay="10" time-unit="MILLISECONDS"
+                    max-messages-per-poll="5"/>
+    </int-kafka:inbound-channel-adapter>
+
+    <int-kafka:consumer-context id="messagesConsumerContext" consumer-properties="consumerProperties"
+                                consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
+        <int-kafka:consumer-configurations>
+            <int-kafka:consumer-configuration key-decoder="stringDecoder"
+                                              value-decoder="stringDecoder"
+                                              group-id="${server.server-name}Group" max-messages="20000">
+                <int-kafka:topic id="${kafka.topic.messages}" streams="3"/>
+            </int-kafka:consumer-configuration>
+        </int-kafka:consumer-configurations>
+    </int-kafka:consumer-context>
+
+    <int:splitter input-channel="messagesQueueOutputChannel" output-channel="sendMessageChannel" apply-sequence="false">
         <int-groovy:script>
             import org.springframework.integration.support.MessageBuilder
             import org.springframework.messaging.simp.stomp.StompHeaderAccessor

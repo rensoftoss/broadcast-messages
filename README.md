@@ -88,6 +88,12 @@ which will be described later in **Coding details** section
     `sudo cp deployments/kafka/kafka.conf /etc/init`
     
     **Warning:** the correct path to Kafka maybe need to be updated in `kafka.conf`
+    
+    You need to create the topics that the application use like follows:
+    
+    `kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic messages`
+    
+    `kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic persistdb`
 
 * Open the following ports on EC2 instance **8080** and **8180**. This should reflect the setup in the **broadcast-messages.conf**, which
  configures two instances from the application

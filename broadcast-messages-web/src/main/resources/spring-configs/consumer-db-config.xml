@@ -3,19 +3,39 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:int="http://www.springframework.org/schema/integration"
        xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
 	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+       http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
 	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
 
     <!--Persist message into database-->
 
-    <int:channel id="queueToDatabaseChannel">
-        <int:dispatcher task-executor="dbChannelExecutor"/>
+    <int:channel id="persistQueueOutputChannel">
+        <int:dispatcher task-executor="persistQueueOutputExecutor"/>
     </int:channel>
 
-    <task:executor id="dbChannelExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
+    <task:executor id="persistQueueOutputExecutor" pool-size="0-10" keep-alive="120" queue-capacity="500"/>
 
-    <int:outbound-channel-adapter channel="queueToDatabaseChannel"
+    <int-kafka:inbound-channel-adapter
+            id="persistInboundChannelAdapter" kafka-consumer-context-ref="persistConsumerContext"
+            auto-startup="true" channel="persistQueueOutputChannel">
+        <int:poller fixed-delay="10" time-unit="MILLISECONDS"
+                    max-messages-per-poll="5"/>
+    </int-kafka:inbound-channel-adapter>
+
+    <int-kafka:consumer-context id="persistConsumerContext" consumer-properties="consumerProperties"
+                                consumer-timeout="1000" zookeeper-connect="zookeeperConnect">
+        <int-kafka:consumer-configurations>
+            <int-kafka:consumer-configuration key-decoder="stringDecoder"
+                                              value-decoder="stringDecoder"
+                                              group-id="databaseGroup" max-messages="20000">
+                <int-kafka:topic id="${kafka.topic.persistdb}" streams="3"/>
+            </int-kafka:consumer-configuration>
+        </int-kafka:consumer-configurations>
+    </int-kafka:consumer-context>
+
+    <int:outbound-channel-adapter channel="persistQueueOutputChannel"
                                   ref="persistMessage" method="processMessage"/>
 
     <bean id="persistMessage" class="com.rensoftoss.broadcastmessages.PersistMessage"/>

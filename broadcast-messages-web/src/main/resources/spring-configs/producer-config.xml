@@ -3,29 +3,54 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:int="http://www.springframework.org/schema/integration"
        xmlns:int-kafka="http://www.springframework.org/schema/integration/kafka"
-       xmlns:task="http://www.springframework.org/schema/task"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/integration/kafka http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd
-	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
-	   http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+	   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
 
-    <int:channel id="queueInputChannel">
-        <int:queue/>
-    </int:channel>
+    <int:channel id="queueInputChannel"/>
+
+    <int:recipient-list-router id="queueInputRouter" input-channel="queueInputChannel"
+                               timeout="6000"
+                               ignore-send-failures="false"
+                               apply-sequence="false">
+        <int:recipient channel="messagesQueueInputChannel"/>
+        <int:recipient channel="persistQueueInputChannel"/>
+    </int:recipient-list-router>
+
+    <!--Push messages to messages topic, the consumers will deliver the messages from this topic to the clients -->
+    <int:channel id="messagesQueueInputChannel"/>
 
     <int-kafka:outbound-channel-adapter
-            id="kafkaOutboundChannelAdapter"
-            kafka-producer-context-ref="kafkaProducerContext"
-            channel="queueInputChannel">
-        <int:poller fixed-delay="100" time-unit="MILLISECONDS" receive-timeout="0" task-executor="taskExecutor"/>
+            id="messagesOutboundChannelAdapter"
+            kafka-producer-context-ref="messagesProducerContext"
+            channel="messagesQueueInputChannel">
     </int-kafka:outbound-channel-adapter>
 
-    <task:executor id="taskExecutor" pool-size="5" keep-alive="120" queue-capacity="500"/>
-
-    <int-kafka:producer-context id="kafkaProducerContext">
+    <int-kafka:producer-context id="messagesProducerContext">
         <int-kafka:producer-configurations>
             <int-kafka:producer-configuration broker-list="${kafka.hosts}"
-                                              topic="${kafka.topic}"
+                                              topic="${kafka.topic.messages}"
+                                              key-encoder="stringEncoder"
+                                              key-class-type="java.lang.String"
+                                              value-encoder="stringEncoder"
+                                              value-class-type="java.lang.String"/>
+        </int-kafka:producer-configurations>
+    </int-kafka:producer-context>
+
+    <!--Push messages to persistdb topic, the consumers will persist the message into database from this topic -->
+
+    <int:channel id="persistQueueInputChannel"/>
+
+    <int-kafka:outbound-channel-adapter
+            id="persistOutboundChannelAdapter"
+            kafka-producer-context-ref="persistProducerContext"
+            channel="persistQueueInputChannel">
+    </int-kafka:outbound-channel-adapter>
+
+    <int-kafka:producer-context id="persistProducerContext">
+        <int-kafka:producer-configurations>
+            <int-kafka:producer-configuration broker-list="${kafka.hosts}"
+                                              topic="${kafka.topic.persistdb}"
                                               key-encoder="stringEncoder"
                                               key-class-type="java.lang.String"
                                               value-encoder="stringEncoder"
