@@ -91,7 +91,7 @@ which will be described later in **Coding details** section
     
     **Warning:** the correct path to Kafka maybe need to be updated in `kafka.conf`
     
-    You need to create the topics that the application use like follows:
+    You need to create the topics that the application uses like follows:
     
     `kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic messages`
     
@@ -177,21 +177,25 @@ in Spring configuration xml files to be available to send the messages into Kafk
 The main flows are implemented using Spring integration which are followed:
 
 * Sending message from add message REST endpoint to Kafka (`producer-config.xml`)
-* Listening and consuming Kafka queue is found in `consumer-config.xml`, which routes the message to database and connected browser clients.
-The latter ones are configured in  `consumer-db-config.xml` and `consumer-ws-config.xml`
+* The common configuration of Kafka queue is found in `consumer-config.xml`. The application
+ routes the messages to database and connected browser clients by using two topics named `messages` and `persistdb`.
+These consumers are configured in  `consumer-db-config.xml` and `consumer-ws-config.xml`
 When any message arrives from Kafka it will be persisted into the database and will be sent to the clients.
+* Please notice that the consumer groups are different, because the messages in `persistdb` topic has to be consumed by
+only one running application instance, while `messages` topic will be consumed by all instances.
 * The websocket configuration in `websocket-config.xml` uses STOMP protocol to communicate with the clients. 
-It also stores the `sessionId` and `subscriptionId` of the connected browser client to communicate with them later.
+It also stores the `sessionId` and `subscriptionId` of the connected browser clients to communicate with them later.
 The messages will be delivered to clients via the `sendMessageChannel`.
 
 ## Test details
 
-Following test cases are identified, :
-* Send one message: it will be shown to all connected clients
-* Send a different message: it will be shown to all connected clients
+Following test cases are identified:
+
+* Send one JSON message: it will be shown to all connected clients
+* Send a different JSON message: it will be shown to all connected clients
 * Send invalid JSON message: the clients will not receive this message and the response 
 from REST endpoint will inform about the wrong message  
-* List of available messages
+* List of available messages: int he response all messages, which are in the database, are listed in JSON format
 * Send message to different instance(s): the message will be shown for all connected browser clients 
 
 It is also recommended to make load tests and scalability tests with SoapUI.
