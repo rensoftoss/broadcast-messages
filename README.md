@@ -27,6 +27,8 @@ The installation can take place on an EC2 instance using Ubuntu 14.04 image on A
 For more information how to setup such an instance please visit [Amazon Web Services Homepage]
 
 Also you need to setup a PostgreSQL database i.e. on an RDS instance.
+After packaging the project the database schema is available in `schema.sql`, which can be used to
+create the necessary objects in database.
 
 The following details contains installation instructions after setting up and logged on an EC2 instance.
 
